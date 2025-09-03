@@ -1,0 +1,20 @@
+{
+  "proxies": [
+    "socks:proxy1.example.com:1080:username:password:enabled",
+    "http:proxy2.example.com:8080:username:password:enabled",
+    "https:proxy3.example.com:443:username:password:enabled"
+  ],
+  "benchmark": {
+    "requests": 100,
+    "interval_ms": 5000,
+    "warmup_requests": 10,
+    "target_url": "https://httpbin.org/get",
+    "concurrency": 10,
+    "timeout_ms": 30000
+  },
+  "statistics": {
+    "percentiles": [90, 95, 99],
+    "mean": true,
+    "median": true
+  }
+}

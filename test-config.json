@@ -1,0 +1,20 @@
+{
+    "proxies": [
+        "socks:proxy1.example.com:1080:username:password:enabled",
+        "http:proxy2.example.com:8080:username:password:enabled"
+    ],
+    "benchmark": {
+        "requests": 5,
+        "interval_ms": 1000,
+        "warmup_requests": 2,
+        "target_url": "https://httpbin.org/get",
+        "ping_url": "https://8.8.8.8",
+        "concurrency": 2,
+        "timeout_ms": 10000
+    },
+    "statistics": {
+        "percentiles": [90, 95, 99],
+        "mean": true,
+        "median": true
+    }
+}
