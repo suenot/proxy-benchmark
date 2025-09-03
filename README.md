@@ -160,7 +160,7 @@ flowchart TD
     DerivedMetrics[Calculate Derived Metrics] --> DerivedCalc[Request Time - 2�Ping Time<br/>= Processing Time]
     DerivedCalc --> Statistics[Calculate Statistics]
     
-    Statistics --> CalcStats[Calculate for Each Metric:<br/>" Mean<br/>" Median<br/>" Percentiles<br/>" Min/Max<br/>" Success Rate]
+    Statistics --> CalcStats[Calculate for Each Metric:<br/>• Mean<br/>• Median<br/>• Percentiles<br/>• Min/Max<br/>• Success Rate]
     
     CalcStats --> GenerateReport[Generate Reports]
     GenerateReport --> SaveFull[Save result.json<br/>Full Metrics]
