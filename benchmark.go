@@ -112,8 +112,16 @@ func (b *BenchmarkEngine) runWarmupForProxy(proxy *Proxy) {
 				return
 			}
 			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
-			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
-				err = b.validateResponse(body)
+			if err == nil {
+				if b.config.Benchmark.OutputResponse {
+					fmt.Printf("Response from proxy %s (warmup):\n%s\n", proxy.Address(), string(body))
+				}
+				if b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+					err = b.validateResponse(body)
+					if err == nil {
+						fmt.Printf("Response validation passed for proxy %s (warmup)\n", proxy.Address())
+					}
+				}
 			}
 		case "socks":
 			client, err := NewSOCKS5Client(proxy, timeout)
@@ -122,8 +130,16 @@ func (b *BenchmarkEngine) runWarmupForProxy(proxy *Proxy) {
 				return
 			}
 			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
-			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
-				err = b.validateResponse(body)
+			if err == nil {
+				if b.config.Benchmark.OutputResponse {
+					fmt.Printf("Response from proxy %s (warmup):\n%s\n", proxy.Address(), string(body))
+				}
+				if b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+					err = b.validateResponse(body)
+					if err == nil {
+						fmt.Printf("Response validation passed for proxy %s (warmup)\n", proxy.Address())
+					}
+				}
 			}
 		default:
 			fmt.Printf("Unsupported protocol for proxy %s: %s\n", proxy.Address(), proxy.Protocol)
@@ -212,6 +228,7 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 
 		start := time.Now()
 		var err error
+		var validationPassed bool
 		switch proxy.Protocol {
 		case "http", "https":
 			client, err := NewHTTPClient(proxy, timeout)
@@ -221,8 +238,16 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 				continue
 			}
 			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
-			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
-				err = b.validateResponse(body)
+			if err == nil {
+				if b.config.Benchmark.OutputResponse {
+					fmt.Printf("Response from proxy %s (request %d):\n%s\n", proxy.Address(), i+1, string(body))
+				}
+				if b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+					err = b.validateResponse(body)
+					if err == nil {
+						validationPassed = true
+					}
+				}
 			}
 		case "socks":
 			client, err := NewSOCKS5Client(proxy, timeout)
@@ -232,8 +257,16 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 				continue
 			}
 			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
-			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
-				err = b.validateResponse(body)
+			if err == nil {
+				if b.config.Benchmark.OutputResponse {
+					fmt.Printf("Response from proxy %s (request %d):\n%s\n", proxy.Address(), i+1, string(body))
+				}
+				if b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+					err = b.validateResponse(body)
+					if err == nil {
+						validationPassed = true
+					}
+				}
 			}
 		default:
 			fmt.Printf("Unsupported protocol for proxy %s: %s\n", proxy.Address(), proxy.Protocol)
@@ -250,6 +283,9 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 			}
 			b.metrics[proxy.String()].AddRequestTime(duration, false)
 		} else {
+			if validationPassed {
+				fmt.Printf("Response validation passed for proxy %s (request %d)\n", proxy.Address(), i+1)
+			}
 			b.metrics[proxy.String()].AddRequestTime(duration, true)
 		}
 	}

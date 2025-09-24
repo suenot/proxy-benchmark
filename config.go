@@ -21,6 +21,7 @@ type BenchmarkConfig struct {
 	Concurrency        int                   `json:"concurrency"`
 	TimeoutMs          int                   `json:"timeout_ms"`
 	ResponseValidation *ResponseValidation   `json:"response_validation,omitempty"`
+	OutputResponse     bool                  `json:"output_response,omitempty"`
 }
 
 // ResponseValidation holds response validation configuration
