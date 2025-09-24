@@ -1,8 +1,19 @@
 config.json
+config.json
 result.json
 results_short.json
 proxies-benchmark
 proxy-benchmark
+
+# Configuration files with real proxy credentials
+test-configs/
+config-test-response.json
+
+# Any config files that might contain real credentials (except examples)
+*-config.json
+!config.example.json
+!test-config.json
+!*.template.json
 *.DS_Store
 .AppleDouble
 .LSOverride

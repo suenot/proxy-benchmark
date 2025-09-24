@@ -14,14 +14,14 @@ type Config struct {
 
 // BenchmarkConfig holds benchmark-specific configuration
 type BenchmarkConfig struct {
-	Requests           int                   `json:"requests"`
-	IntervalMs         int                   `json:"interval_ms"`
-	WarmupRequests     int                   `json:"warmup_requests"`
-	TargetURL          string                `json:"target_url"`
-	Concurrency        int                   `json:"concurrency"`
-	TimeoutMs          int                   `json:"timeout_ms"`
-	ResponseValidation *ResponseValidation   `json:"response_validation,omitempty"`
-	OutputResponse     bool                  `json:"output_response,omitempty"`
+	Requests           int                 `json:"requests"`
+	IntervalMs         int                 `json:"interval_ms"`
+	WarmupRequests     int                 `json:"warmup_requests"`
+	TargetURL          string              `json:"target_url"`
+	Concurrency        int                 `json:"concurrency"`
+	TimeoutMs          int                 `json:"timeout_ms"`
+	ResponseValidation *ResponseValidation `json:"response_validation,omitempty"`
+	OutputResponse     bool                `json:"output_response,omitempty"`
 }
 
 // ResponseValidation holds response validation configuration
