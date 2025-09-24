@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -109,14 +111,20 @@ func (b *BenchmarkEngine) runWarmupForProxy(proxy *Proxy) {
 				fmt.Printf("Failed to create HTTP client for proxy %s: %v\n", proxy.Address(), err)
 				return
 			}
-			_, err = client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+				err = b.validateResponse(body)
+			}
 		case "socks":
 			client, err := NewSOCKS5Client(proxy, timeout)
 			if err != nil {
 				fmt.Printf("Failed to create SOCKS5 client for proxy %s: %v\n", proxy.Address(), err)
 				return
 			}
-			_, err = client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+				err = b.validateResponse(body)
+			}
 		default:
 			fmt.Printf("Unsupported protocol for proxy %s: %s\n", proxy.Address(), proxy.Protocol)
 			return
@@ -212,7 +220,10 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 				b.metrics[proxy.String()].AddRequestTime(0, false)
 				continue
 			}
-			_, err = client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+				err = b.validateResponse(body)
+			}
 		case "socks":
 			client, err := NewSOCKS5Client(proxy, timeout)
 			if err != nil {
@@ -220,7 +231,10 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 				b.metrics[proxy.String()].AddRequestTime(0, false)
 				continue
 			}
-			_, err = client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			body, err := client.MakeRequest(ctx, b.config.Benchmark.TargetURL)
+			if err == nil && b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+				err = b.validateResponse(body)
+			}
 		default:
 			fmt.Printf("Unsupported protocol for proxy %s: %s\n", proxy.Address(), proxy.Protocol)
 			b.metrics[proxy.String()].AddRequestTime(0, false)
@@ -229,7 +243,11 @@ func (b *BenchmarkEngine) runRequestBenchmarkingForProxy(proxy *Proxy) {
 
 		duration := time.Since(start)
 		if err != nil {
-			fmt.Printf("Request failed for proxy %s: %v\n", proxy.Address(), err)
+			if b.config.Benchmark.ResponseValidation != nil && b.config.Benchmark.ResponseValidation.Enabled {
+				fmt.Printf("Request/Validation failed for proxy %s: %v\n", proxy.Address(), err)
+			} else {
+				fmt.Printf("Request failed for proxy %s: %v\n", proxy.Address(), err)
+			}
 			b.metrics[proxy.String()].AddRequestTime(duration, false)
 		} else {
 			b.metrics[proxy.String()].AddRequestTime(duration, true)
@@ -260,6 +278,123 @@ func (b *BenchmarkEngine) calculateStatistics() {
 	for _, metrics := range b.metrics {
 		UpdateMetricsStatistics(metrics, &b.config.Statistics)
 	}
+}
+
+// validateResponse validates the response body against configured checks
+func (b *BenchmarkEngine) validateResponse(body []byte) error {
+	if b.config.Benchmark.ResponseValidation == nil || !b.config.Benchmark.ResponseValidation.Enabled {
+		return nil
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	for _, check := range b.config.Benchmark.ResponseValidation.Checks {
+		value, err := getNestedValue(data, check.Path)
+		if err != nil {
+			return fmt.Errorf("validation failed for path '%s': %w", check.Path, err)
+		}
+
+		if err := validateType(value, check.Type, check.Value); err != nil {
+			return fmt.Errorf("validation failed for path '%s': %w", check.Path, err)
+		}
+	}
+
+	return nil
+}
+
+// getNestedValue retrieves a value from a nested map using dot notation path
+func getNestedValue(data map[string]interface{}, path string) (interface{}, error) {
+	parts := strings.Split(path, ".")
+	var current interface{} = data
+
+	for _, part := range parts {
+		if m, ok := current.(map[string]interface{}); ok {
+			if val, exists := m[part]; exists {
+				current = val
+			} else {
+				return nil, fmt.Errorf("path not found: %s", part)
+			}
+		} else {
+			return nil, fmt.Errorf("cannot navigate through non-object at %s", part)
+		}
+	}
+
+	return current, nil
+}
+
+// validateType checks if a value matches the expected type and optional value
+func validateType(value interface{}, expectedType string, expectedValue interface{}) error {
+	switch expectedType {
+	case "boolean":
+		boolVal, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("expected boolean, got %T", value)
+		}
+		if expectedValue != nil {
+			if expectedBool, ok := expectedValue.(bool); ok {
+				if boolVal != expectedBool {
+					return fmt.Errorf("expected value %v, got %v", expectedBool, boolVal)
+				}
+			}
+		}
+	case "number":
+		_, ok := value.(float64)
+		if !ok {
+			_, ok = value.(int)
+			if !ok {
+				return fmt.Errorf("expected number, got %T", value)
+			}
+		}
+		if expectedValue != nil {
+			// Compare numeric values if provided
+			var numVal float64
+			switch v := value.(type) {
+			case float64:
+				numVal = v
+			case int:
+				numVal = float64(v)
+			}
+			var expectedNum float64
+			switch v := expectedValue.(type) {
+			case float64:
+				expectedNum = v
+			case int:
+				expectedNum = float64(v)
+			}
+			if numVal != expectedNum {
+				return fmt.Errorf("expected value %v, got %v", expectedNum, numVal)
+			}
+		}
+	case "string":
+		strVal, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("expected string, got %T", value)
+		}
+		if expectedValue != nil {
+			if expectedStr, ok := expectedValue.(string); ok {
+				if strVal != expectedStr {
+					return fmt.Errorf("expected value %v, got %v", expectedStr, strVal)
+				}
+			}
+		}
+	case "array":
+		_, ok := value.([]interface{})
+		if !ok {
+			return fmt.Errorf("expected array, got %T", value)
+		}
+	case "object":
+		_, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("expected object, got %T", value)
+		}
+	default:
+		return fmt.Errorf("unknown type: %s", expectedType)
+	}
+
+	return nil
 }
 
 // GetResults returns the benchmark results

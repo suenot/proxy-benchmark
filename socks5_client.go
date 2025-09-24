@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"golang.org/x/net/proxy"
+	"io"
 	"net/http"
 	"time"
 )
@@ -40,21 +41,23 @@ func NewSOCKS5Client(p *Proxy, timeout time.Duration) (*SOCKS5Client, error) {
 	}, nil
 }
 
-// MakeRequest performs an HTTP request through SOCKS5 proxy and returns the time taken
-func (s *SOCKS5Client) MakeRequest(ctx context.Context, targetURL string) (time.Duration, error) {
-	start := time.Now()
-
+// MakeRequest performs an HTTP request through SOCKS5 proxy and returns the response body
+func (s *SOCKS5Client) MakeRequest(ctx context.Context, targetURL string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	duration := time.Since(start)
-	return duration, nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }

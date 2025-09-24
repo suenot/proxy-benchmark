@@ -14,12 +14,26 @@ type Config struct {
 
 // BenchmarkConfig holds benchmark-specific configuration
 type BenchmarkConfig struct {
-	Requests       int    `json:"requests"`
-	IntervalMs     int    `json:"interval_ms"`
-	WarmupRequests int    `json:"warmup_requests"`
-	TargetURL      string `json:"target_url"`
-	Concurrency    int    `json:"concurrency"`
-	TimeoutMs      int    `json:"timeout_ms"`
+	Requests           int                   `json:"requests"`
+	IntervalMs         int                   `json:"interval_ms"`
+	WarmupRequests     int                   `json:"warmup_requests"`
+	TargetURL          string                `json:"target_url"`
+	Concurrency        int                   `json:"concurrency"`
+	TimeoutMs          int                   `json:"timeout_ms"`
+	ResponseValidation *ResponseValidation   `json:"response_validation,omitempty"`
+}
+
+// ResponseValidation holds response validation configuration
+type ResponseValidation struct {
+	Enabled bool              `json:"enabled"`
+	Checks  []ValidationCheck `json:"checks"`
+}
+
+// ValidationCheck defines a single validation rule
+type ValidationCheck struct {
+	Path  string      `json:"path"`
+	Type  string      `json:"type"`
+	Value interface{} `json:"value,omitempty"`
 }
 
 // StatisticsConfig holds statistics configuration
