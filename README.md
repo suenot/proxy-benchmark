@@ -1,4 +1,5 @@
 # Proxies Benchmark
+[![Wiki](https://img.shields.io/badge/wiki-documentation-blue)](.qoder/repowiki/en/content/)
 
 A comprehensive benchmarking tool for testing and comparing proxy servers performance. This tool measures latency, throughput, and reliability of HTTP/HTTPS/SOCKS5 proxies through concurrent testing.
 
